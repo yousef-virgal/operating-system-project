@@ -24,6 +24,10 @@ main(void)
 #else
 #ifdef PRIORITY
   printf(1, "Scheduler policy: PRIORITY\n");
+#else
+#ifdef MLFQ
+  printf(1, "Scheduler policy: MLFQ\n");
+#endif
 #endif
 #endif
 

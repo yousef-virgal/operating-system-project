@@ -1,3 +1,6 @@
+
+#define PRIORITY_MAX 2
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -51,6 +54,8 @@ struct proc {
   char name[16];               // Process name (debugging)
 
   int priority;
+
+  int priorityMultilevelqueue;
 };
 
 // Process memory is laid out contiguously, low addresses first:

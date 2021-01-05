@@ -10,6 +10,8 @@
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  int priCount[3];
+  struct proc* que[3][NPROC];
 } ptable;
 
 static struct proc *initproc;
@@ -24,6 +26,11 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+#ifdef MLFQ
+  ptable.priCount[0] = -1;
+  ptable.priCount[1] = -1;
+  ptable.priCount[2] = -1;
+#endif
 }
 
 // Must be called with interrupts disabled
@@ -148,7 +155,10 @@ userinit(void)
   // writes to be visible, and the lock is also needed
   // because the assignment might not be atomic.
   acquire(&ptable.lock);
-
+#ifdef MLFQ
+  ptable.priCount[0]++;
+  ptable.que[0][ptable.priCount[0]] = p;
+#endif
   p->state = RUNNABLE;
 
   release(&ptable.lock);
@@ -216,7 +226,10 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
-
+#ifdef MLFQ
+  ptable.priCount[0]++;
+  ptable.que[0][ptable.priCount[0]] = np;
+#endif
   release(&ptable.lock);
 
   return pid;
@@ -340,6 +353,18 @@ scheduler(void)
 #ifdef DEFAULT
       if(p->state != RUNNABLE)
         continue;
+      if (p != 0) {
+          c->proc = p;
+          switchuvm(p);
+          p->state = RUNNING;
+
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
+
+          // Process is done running for now.
+          // It should have changed its p->state before coming back.
+          c->proc = 0;
+      }
 #else 
 #ifdef PRIORITY
       // Switch to chosen process.  It is the process's job
@@ -356,8 +381,6 @@ scheduler(void)
       }
       if (highP != 0)
           p = highP;
-#endif
-#endif
       if (p != 0) {
           c->proc = p;
           switchuvm(p);
@@ -370,6 +393,30 @@ scheduler(void)
           // It should have changed its p->state before coming back.
           c->proc = 0;
       }
+#else
+#ifdef MLFQ
+      int priority;
+      for (priority = 0; priority <= PRIORITY_MAX; priority++) {
+          while (ptable.priCount[priority] > -1) {
+              p = ptable.que[priority][0];
+              int i;
+              for (i = 0; i < ptable.priCount[priority]; i++) {
+                  ptable.que[priority][i] = ptable.que[priority][i + 1];
+              }
+              ptable.priCount[priority]--;
+              c->proc = p;
+              switchuvm(p);
+              p->state = RUNNING;
+              swtch(&(c->scheduler), p->context);
+              switchkvm();
+              c->proc = 0;
+              priority = 0;
+          }
+      }
+#endif
+#endif
+#endif
+    
     }
     release(&ptable.lock);
 
@@ -409,7 +456,15 @@ void
 yield(void)
 {
   acquire(&ptable.lock);  //DOC: yieldlock
-  myproc()->state = RUNNABLE;
+  struct proc* p = myproc();
+#ifdef MLFQ
+  
+  if (p->priorityMultilevelqueue < 2)
+      p->priorityMultilevelqueue++;
+  ptable.priCount[p->priorityMultilevelqueue]++;
+  ptable.que[p->priorityMultilevelqueue][ptable.priCount[p->priorityMultilevelqueue]] = p;
+#endif
+  p->state = RUNNABLE;
   sched();
   release(&ptable.lock);
 }
@@ -483,8 +538,13 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
-      p->state = RUNNABLE;
+      if (p->state == SLEEPING && p->chan == chan) {
+#ifdef MLFQ
+          ptable.priCount[p->priorityMultilevelqueue]++;
+          ptable.que[p->priorityMultilevelqueue][ptable.priCount[p->priorityMultilevelqueue]] = p;
+#endif
+          p->state = RUNNABLE;
+      }
 }
 
 // Wake up all processes sleeping on chan.
@@ -509,8 +569,13 @@ kill(int pid)
     if(p->pid == pid){
       p->killed = 1;
       // Wake process from sleep if necessary.
-      if(p->state == SLEEPING)
-        p->state = RUNNABLE;
+      if (p->state == SLEEPING) {
+#ifdef MLFQ
+          ptable.priCount[p->priorityMultilevelqueue]++;
+          ptable.que[p->priorityMultilevelqueue][ptable.priCount[p->priorityMultilevelqueue]] = p;
+#endif
+          p->state = RUNNABLE;
+      }
       release(&ptable.lock);
       return 0;
     }
@@ -561,15 +626,15 @@ int cps(void) {
     struct proc* p;
     sti();
     acquire(&ptable.lock);
-    cprintf("name \t pid \t state \t\t priority \t \n");
+    cprintf("name \t pid \t state \t\t priority \t MLFQ \t \n");
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
     
         if (p->state == SLEEPING)
-            cprintf("%s \t %d \t SLEPPING \t %d\n ",p->name,p->pid,p->priority);
+            cprintf("%s \t %d \t SLEPPING \t %d \t %d \t\t\t \n ",p->name,p->pid,p->priority,p->priorityMultilevelqueue);
         else if (p->state == RUNNING)
-            cprintf("%s \t %d \t RUNNING \t %d\n ", p->name, p->pid, p->priority);
+            cprintf("%s \t %d \t RUNNING \t %d \t %d \t\t\t \n ", p->name, p->pid, p->priority,p->priorityMultilevelqueue);
         else if (p->state == RUNNABLE)
-            cprintf("%s \t %d \t RUNNABLE \t %d\n ", p->name, p->pid, p->priority);
+            cprintf("%s \t %d \t RUNNABLE \t %d \t %d \t\t\t \n ", p->name, p->pid, p->priority,p->priorityMultilevelqueue);
     }
     release(&ptable.lock);
     return 22;
@@ -590,4 +655,35 @@ chpr(int pid, int priority) {
     }
     release(&ptable.lock);
     return pid;
+}
+
+void resetPriority(void) {
+
+    struct proc* p;
+    acquire(&ptable.lock);
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if (p->state = RUNNABLE) {
+        
+            for (int token = 0; token < NPROC; token++) {
+            
+                if (p == ptable.que[p->priorityMultilevelqueue][token]) {
+                
+                    for (int i = token; i < NPROC; i++) {
+                    
+                        ptable.que[p->priorityMultilevelqueue][i] = ptabel[p->priorityMultilevelqueue][i + 1];
+                    }
+                    ptable.priCount[p->priorityMultilevelqueue]--;
+                }
+                break;
+            }
+            p->priorityMultilevelqueue = 0;
+            ptable.priCount[0]++;
+            ptable.que[0][ptable.priCount[0]] = p;
+        }
+        else {
+        
+            p->priorityMultilevelqueue = 0;
+        }
+    }
+    release(&ptable.lock);
 }
