@@ -55,7 +55,7 @@ struct proc {
 
   int priority;
 
-  int priorityMultilevelqueue;
+  int priorityMultilevelqueue; //0,1,2
 
   int nocs;                    //Number of context switches
   int burst_time;              //Burst time 

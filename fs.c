@@ -94,7 +94,7 @@ balloc(uint dev)
 	}
 	panic("balloc: out of blocks");
 }
-//hi
+
 static uint
 ballocTest(uint dev, uint extentSize)
 {

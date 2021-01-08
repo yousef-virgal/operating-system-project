@@ -27,10 +27,13 @@ main(void)
 #else
 #ifdef MLFQ
   printf(1, "Scheduler policy: MLFQ\n");
+#else
+#ifdef SJF
+  printf(1, "Scheduler policy: SJF\n");
 #endif
 #endif
 #endif
-
+#endif
 
 
   for(;;){
