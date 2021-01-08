@@ -31,6 +31,8 @@ main(void)
 #endif
 #endif
 
+
+
   for(;;){
     printf(1, "init: starting sh\n");
     pid = fork();

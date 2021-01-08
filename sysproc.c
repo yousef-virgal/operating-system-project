@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "processInfo.h"
 
 int
 sys_fork(void)
@@ -106,4 +107,74 @@ sys_chpr(void)
     if (argint(1, &pr) < 0)
         return -1;
     return chpr(pid, pr);
+}
+
+int
+sys_getNumProc(void)
+{
+
+    return getNumProcAssist();
+
+}
+
+int
+sys_getMaxPID(void)
+{
+
+    return getMaxPIDAssist();
+
+}
+
+int
+sys_getProcInfo(void) {
+    int pid;
+
+    struct processInfo* info;
+    argptr(0, (void*)&pid, sizeof(pid));
+    argptr(1, (void*)&info, sizeof(info));
+
+    struct processInfo temporaryInfo = getProcInfoAssist(pid);
+
+    if (temporaryInfo.ppid == -1)return -1;
+
+    info->ppid = temporaryInfo.ppid;
+    info->psize = temporaryInfo.psize;
+    info->numberContextSwitches = temporaryInfo.numberContextSwitches;
+    return 0;
+
+}
+
+int
+sys_set_burst_time(void)
+{
+    int burst_time;
+    argptr(0, (void*)&burst_time, sizeof(burst_time));
+
+    return set_burst_timeAssist(burst_time);
+}
+
+int
+sys_get_burst_time(void)
+{
+    return get_burst_timeAssist();
+}
+
+int
+sys_getCurrentInfo(void)
+{
+    struct processInfo* info;
+    argptr(0, (void*)&info, sizeof(info));
+
+    struct processInfo temporaryInfo = getCurrentInfoAssist();
+
+    if (temporaryInfo.ppid == -1)return -1;
+
+    info->ppid = temporaryInfo.ppid;
+    info->psize = temporaryInfo.psize;
+    info->numberContextSwitches = temporaryInfo.numberContextSwitches;
+    return 0;
+}
+
+int sys_getCurrentPID(void) {
+    return getCurrentPIDAssist();
 }

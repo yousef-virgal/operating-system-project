@@ -105,6 +105,13 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_cps(void);
 extern int sys_chpr(void);
+extern int sys_getNumProc(void);
+extern int sys_getMaxPID(void);
+extern int sys_getProcInfo(void);
+extern int sys_set_burst_time(void);
+extern int sys_get_burst_time(void);
+extern int sys_getCurrentInfo(void);
+extern int sys_getCurrentPID(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -130,6 +137,13 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_cps]     sys_cps,
 [SYS_chpr]    sys_chpr,
+[SYS_getNumProc] sys_getNumProc,
+[SYS_getMaxPID] sys_getMaxPID,
+[SYS_getProcInfo] sys_getProcInfo,
+[SYS_set_burst_time] sys_set_burst_time,
+[SYS_get_burst_time] sys_get_burst_time,
+[SYS_getCurrentInfo] sys_getCurrentInfo,
+[SYS_getCurrentPID] sys_getCurrentPID,
 };
 
 void

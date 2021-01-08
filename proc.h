@@ -56,6 +56,10 @@ struct proc {
   int priority;
 
   int priorityMultilevelqueue;
+
+  int nocs;                    //Number of context switches
+  int burst_time;              //Burst time 
+  int rt;                      //running time
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -63,3 +67,11 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+int getNumProcAssist(void);
+int getMaxPIDAssist(void);
+struct processInfo getProcInfoAssist(int pid);
+int set_burst_timeAssist(int burst_time);
+int get_burst_timeAssist();
+struct processInfo getCurrentInfoAssist();
+int getCurrentPIDAssist(void);

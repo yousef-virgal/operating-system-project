@@ -22,3 +22,11 @@
 #define SYS_close  21
 #define SYS_cps	   22
 #define SYS_chpr   23
+#define SYS_getNumProc 24
+#define SYS_getMaxPID 25
+#define SYS_getProcInfo 26
+#define SYS_set_burst_time 27
+#define SYS_get_burst_time 28
+#define SYS_test_scheduler 29
+#define SYS_getCurrentInfo 30
+#define SYS_getCurrentPID 31

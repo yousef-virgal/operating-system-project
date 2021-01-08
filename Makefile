@@ -75,14 +75,23 @@ ifndef SCHEDFLAG
 SCHEDFLAG := DEFAULT
 endif
 
+ifndef EXTENT_SIZE
+EXTENT_SIZE := 2
+endif
+
+
+
+
+
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer -D $(SCHEDFLAG)
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -Werror -fno-omit-frame-pointer -D $(SCHEDFLAG) -DEXTENT_SIZE=$(EXTENT_SIZE)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32 -gdwarf-2 -Wa,-divide
+
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null | head -n 1)
 
@@ -171,6 +180,7 @@ mkfs: mkfs.c fs.h
 
 UPROGS=\
 	_cat\
+	_testAlloc\
 	_echo\
 	_forktest\
 	_grep\
@@ -184,6 +194,8 @@ UPROGS=\
 	_stressfs\
 	_usertests\
 	_wc\
+	_test_scheduler\
+	_testOne\
 	_ps\
 	_foo\
 	_nice\
@@ -260,7 +272,7 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
-	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c ps.c foo.c nice.c zombie.c\
+	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c ps.c foo.c nice.c zombie.c testAlloc.c \
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\
